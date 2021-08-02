@@ -1,0 +1,954 @@
+# python gui program
+# using tkinter module
+# clicker game
+# the goal is to click out every blue ball before the red ball falls back to it's starting position
+# the idea is based on a very similar game I used to play as a kid
+# scores can be saved and searched
+
+# sqlite database is used to save score
+
+from tkinter import *
+from tkinter import messagebox as mb
+from tkinter import filedialog
+from tkinter.simpledialog import askstring
+from random import randint, shuffle
+from time import time
+import sqlite3
+import datetime
+
+# tkinter window is destroyed and recreated after every level
+
+# very global variables :-)
+# variables independent of specific levels 
+
+level_nr=1
+refreshed='off'
+time_list={}
+donsave='off'
+
+# main function
+
+def start_gui():
+
+# global variables
+
+    global decaseconds
+    global click_nr
+    global level_nr
+    global small_balls_clicked
+    global text
+
+    decaseconds=200
+    click_nr=0
+    small_balls_clicked=0
+
+    global bb1
+    global bb2
+    global bb3
+    global bb4
+    global bb5
+    global bb6
+    global bb7
+    global bb8
+    global bb9
+    global bb10
+
+    bb1=None
+    bb2=None
+    bb3=None
+    bb4=None
+    bb5=None
+    bb6=None
+    bb7=None
+    bb8=None
+    bb9=None
+    bb10=None
+
+
+# defining tkinter window
+
+    global root
+    root = Tk()
+
+    root.title('Flyball')
+    root.geometry('800x600')
+
+    canvas=Canvas(root, width=800,height=600,bg='white')
+    canvas.grid(row=0, column=0)
+    
+# creating the big moving red ball and a horizontal line as a base for it
+
+    red_ball=canvas.create_oval(600, 400, 700, 500, outline='red',fill='red')
+    line=canvas.create_line(550,500,750,500)
+
+# function for saving scores
+# creates a .db file and adds new scores to it
+
+    def saver():
+
+        global time_list
+
+        
+        name = askstring('Name', 'What is your name?')
+
+        while  name=='':
+            name = askstring('Enter at least one character', 'What is your name?')
+        if name==None:
+            return
+        
+# connecting db
+
+        conn=sqlite3.connect('flyball_scores.db')
+        c=conn.cursor()
+        try:
+            c.execute('''CREATE TABLE overall_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level1_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level2_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level3_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level4_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level5_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level6_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level7_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level8_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level9_score(
+            name text,
+            score real,
+            date text)''')
+
+            c.execute('''CREATE TABLE level10_score(
+            name text,
+            score real,
+            date text)''')
+            
+# pass if database alreay exists
+
+        except:
+            pass
+# saving name enterede, score in seconds, date        
+        today = datetime.date.today()
+        
+        if time_list.get(1):
+            c.execute('INSERT INTO level1_score VALUES(:name,:score,:date)',
+            {
+                'name':name,
+                'score':time_list[1],
+                'date':today.strftime("%b %d %Y")
+            })
+
+        if time_list.get(2):
+            c.execute('INSERT INTO level2_score VALUES(:name,:score,:date)',
+            {
+                'name':name,
+                'score':time_list[2],
+                'date':today.strftime("%b %d %Y")
+            })
+
+        if time_list.get(3):
+            c.execute('INSERT INTO level3_score VALUES(:name,:score,:date)',
+            {
+                'name':name,
+                'score':time_list[3],
+                'date':today.strftime("%b %d %Y")
+            })
+
+        if time_list.get(4):
+            c.execute('INSERT INTO level4_score VALUES(:name,:score,:date)',
+            {
+                'name':name,
+                'score':time_list[4],
+                'date':today.strftime("%b %d %Y")
+            })
+
+        if time_list.get(5):
+            c.execute('INSERT INTO level5_score VALUES(:name,:score,:date)',
+            {
+                'name':name,
+                'score':time_list[5],
+                'date':today.strftime("%b %d %Y")
+            })
+
+        if time_list.get(6):
+            c.execute('INSERT INTO level6_score VALUES(:name,:score,:date)',
+            {
+                'name':name,
+                'score':time_list[6],
+                'date':today.strftime("%b %d %Y")
+            })
+
+        if time_list.get(7):
+            c.execute('INSERT INTO level7_score VALUES(:name,:score,:date)',
+            {
+                'name':name,
+                'score':time_list[7],
+                'date':today.strftime("%b %d %Y")
+            })
+
+        if time_list.get(8):
+            c.execute('INSERT INTO level8_score VALUES(:name,:score,:date)',
+            {
+                'name':name,
+                'score':time_list[8],
+                'date':today.strftime("%b %d %Y")
+            })
+
+        if time_list.get(9):
+            c.execute('INSERT INTO level9_score VALUES(:name,:score,:date)',
+            {
+                'name':name,
+                'score':time_list[9],
+                'date':today.strftime("%b %d %Y")
+            })
+
+        conn.commit()
+        conn.close()
+      
+# function starts new level
+# calls function that destroyes window and creates a new one
+
+    def new():
+        global level_nr
+        global time_list
+        global donsave
+
+        if time_list!={} and donsave=='off':
+            option=mb.askyesnocancel("Unsaved score", "Do you want to save your score for the levels you completed?")
+            if option==True:
+                saver()
+            elif option==None:
+                return
+            
+
+        time_list={}
+        level_nr=0
+        refresh()
+        
+
+    def new_key(event):
+        new()
+
+# function starts new level - level number specified by user
+# calls function that destroyes window and creates a new one
+
+
+    def start_level(nr):
+        global level_nr
+        global time_list
+        global donsave
+
+        if time_list!={} and donsave=='off':
+            option=mb.askyesnocancel("Unsaved score", "Do you want to save your score for the levels you completed?")
+            if option==True:
+                saver()
+            elif option==None:
+                return
+            
+
+        time_list={}
+        level_nr=nr-1
+        refresh()
+        
+# exit program
+
+    def exiter():
+        global level_nr
+        global time_list
+        global level_nr
+        global donsave
+
+        if time_list!={} and donsave=='off':
+            option=mb.askyesnocancel("Unsaved score", "Do you want to save your score for the levels you completed?")
+            if option==True:
+                saver()
+            elif option==None:
+                return
+
+        time_list={}
+        level_nr=0
+        root.destroy()
+        
+        
+    
+    def exit_key(event):
+        exiter()
+
+    root.protocol("WM_DELETE_WINDOW", exiter)
+    
+    root.bind('<Control-n>',new_key)
+    root.bind('<Control-q>',exit_key)
+
+    
+# represent all scores in database as tkinter lists       
+
+    def show():
+        
+        list1=None
+        list2=None
+        list3=None
+        list4=None
+        list5=None
+        list6=None
+        list7=None
+        list8=None
+        list9=None
+        list10=None
+
+        scroll1=None
+        scroll2=None
+        scroll3=None
+        scroll4=None
+        scroll5=None
+        scroll6=None
+        scroll7=None
+        scroll8=None
+        scroll9=None
+        scroll10=None
+
+        lists=[list1,list2,list3,list4,list5,list6,list7,list8,list9,list10]
+        scrolls=[scroll1,scroll2,scroll3,scroll4,scroll5,scroll6,scroll7,scroll8,scroll9,scroll10]
+        
+        conn=sqlite3.connect('flyball_scores.db')
+        c=conn.cursor()
+        
+# pop up window
+
+        global window
+
+        window =Toplevel(root)
+        window.geometry('500x600')
+
+# menubar
+# search for specific entries by name
+
+        menubar2 = Menu(window)
+        window.config(menu=menubar2)
+    
+        searchmenu = Menu(menubar2, tearoff=0)
+
+# calls a function that will create a second pop up
+
+        searchmenu.add_command(label="Search in scores", command=search_pop)
+        searchmenu.add_separator()
+        menubar2.add_cascade(label='Search', menu=searchmenu)
+    
+# making the whole pop up window scrollable
+# code from codemy's youtube channel
+
+        main_frame=Frame(window)
+        main_frame.pack(fill=BOTH, expand=1)
+
+        my_canvas=Canvas(main_frame)
+        my_canvas.pack(side=LEFT, fill=BOTH, expand=1)
+
+        my_scrollbar=Scrollbar(main_frame, orient=VERTICAL, command=my_canvas.yview)
+        my_scrollbar.pack(side=RIGHT,fill=Y)
+
+        my_canvas.configure(yscrollcommand=my_scrollbar.set)
+        my_canvas.bind('<Configure>',lambda e:my_canvas.configure(scrollregion=my_canvas.bbox('all')))
+
+        second_frame=Frame(my_canvas)
+        my_canvas.create_window((0,0),window=second_frame,anchor=NW)
+
+# making scrollbars and lists (scores for every level)
+        
+        scroll_overall = Scrollbar(second_frame, orient="vertical")
+        scroll_overall.grid(row=0, column=1,ipady=75)
+
+        list_overall  = Listbox(second_frame, width=57, height=10,yscrollcommand = scroll_overall.set)
+        list_overall.grid(row=0, column=0)
+        
+        scroll_overall.config(command=list_overall.yview)
+
+        for x in range(10):
+            scrolls[x]= Scrollbar(second_frame, orient="vertical")
+            scrolls[x].grid(row=x+1, column=1,ipady=75)
+
+            lists[x]  = Listbox(second_frame, width=57, height=10,yscrollcommand = scrolls[x].set)
+            lists[x].grid(row=x+1, column=0)
+        
+            scrolls[x].config(command=lists[x].yview)
+            
+# filling lists with entries
+       
+        c.execute('SELECT *,oid FROM overall_score ORDER BY score')
+        records=c.fetchall()
+
+        list_overall.insert(END,'                                       OVERALL SCORES')
+        list_overall.insert(END,'')
+        nr=0
+        for record in records:
+            nr+=1
+            list_overall.insert(END, str(nr)+'.  '+str(record[0])+'--'+str(round(record[1],3))+' seconds--'+str(record[2]))
+
+
+        for x in range(10):
+            c.execute('SELECT *,oid FROM level'+str(x+1)+'_score ORDER BY score')
+            records=c.fetchall()
+
+            lists[x].insert(END,'                                       LEVEL '+str(x+1)+' SCORES')
+            lists[x].insert(END,'')
+            nr=0
+            for record in records:
+                nr+=1
+                lists[x].insert(END, str(nr)+'.  '+str(record[0])+'--'+str(round(record[1],3))+' seconds--'+str(record[2]))
+            
+            
+    
+        
+    
+        conn.commit()
+        conn.close()
+
+# event based searching for specific players' scores
+
+    def search(event):
+        global search_window
+        global entry_bar
+        global lister
+
+        if entry_bar.get()=='':
+            return
+        lister.delete(0, 'end')
+        
+# lists with all scores that match searching, ordered by level and time 
+
+        list1=[]
+        list2=[]
+        list3=[]
+        list4=[]
+        list5=[]
+        list6=[]
+        list7=[]
+        list8=[]
+        list9=[]
+        list10=[]
+
+        lists=[list1,list2,list3,list4,list5,list6,list7,list8,list9,list10]
+        
+        conn=sqlite3.connect('flyball_scores.db')
+        c=conn.cursor()
+
+        c.execute('SELECT *,oid FROM overall_score ORDER BY score')
+        records=c.fetchall()
+    
+        list_overall=[]
+        counter=0
+        for record in records:
+            counter+=1
+            list_overall.append([counter,record[0],record[1],record[2]])
+
+        for x in range(10):
+            c.execute('SELECT *,oid FROM level'+str(x+1)+'_score ORDER BY score')
+            records=c.fetchall()
+
+            counter=0
+            for record in records:
+                counter+=1
+                lists[x].append([counter,record[0],record[1],record[2]])
+               
+# add search results to lists
+
+        counter=0
+        for el in list_overall:
+            if entry_bar.get()==el[1]:
+                if counter==0:
+                    lister.insert(END,'')
+                    lister.insert(END, '                                           In overall scores')
+                lister.insert(END, '    Place nr. '+str(el[0])+' - '+'time: '+str(el[2])+' seconds'+' - '+'on '+str(el[3]))
+                counter+=1
+        
+        for x in range(10):
+            counter=0
+            for el in lists[x]:
+                if entry_bar.get()==el[1]:
+                    if counter==0:
+                        lister.insert(END,'')
+                        lister.insert(END, '                                                 Level '+str(x+1))
+                    lister.insert(END, '    Place nr. '+str(el[0])+' - '+'time: '+str(el[2])+' seconds'+' - '+'on '+str(el[3]))
+                    counter+=1
+       
+        
+        
+    
+        conn.commit()
+        conn.close()
+
+# 2nd pop up window and search bar        
+
+    def search_pop():
+
+        global window
+        global search_window
+        global entry_bar
+        global lister
+    
+        
+        search_window =Toplevel(window)
+        search_window.geometry('500x600')
+        
+        search_window.bind('<Return>',search)
+
+        entry_bar=Entry(search_window)
+        entry_bar.grid(row=0,column=0)
+    
+        scrolla= Scrollbar(search_window, orient="vertical")
+        scrolla.grid(row=1, column=1,ipady=266)
+
+        lister  = Listbox(search_window, width=60, height=31,yscrollcommand = scrolla.set)
+        lister.grid(row=1, column=0)
+        
+        scrolla.config(command=lister.yview)
+
+# function for don't save switch - when activated program won't ask if user want's to save score
+        
+    def don_save():
+        global donsave
+        
+        if donsave=='off':
+            donsave='on'
+            optmenu.entryconfigure("Don't save switch... ",background='orange',label="Don't save switch... ACTIVATED")
+        else:
+            donsave='off'
+            optmenu.entryconfigure("Don't save switch... ACTIVATED",background='grey85',label="Don't save switch... ")
+            
+# menubar of the main window
+
+    menubar = Menu(root)
+    root.config(menu=menubar)
+    
+    filemenu = Menu(menubar, tearoff=0)
+    filemenu.add_command(label="New...       Ctrl+N", command=new)
+    filemenu.add_separator()
+    
+    submenu=Menu(filemenu, tearoff=0)
+    submenu.add_command(label='1', command=lambda:start_level(1))
+    submenu.add_command(label='2', command=lambda:start_level(2))
+    submenu.add_command(label='3', command=lambda:start_level(3))
+    submenu.add_command(label='4', command=lambda:start_level(4))
+    submenu.add_command(label='5', command=lambda:start_level(5))
+    submenu.add_command(label='6', command=lambda:start_level(6))
+    submenu.add_command(label='7', command=lambda:start_level(7))
+    submenu.add_command(label='8', command=lambda:start_level(8))
+    submenu.add_command(label='9', command=lambda:start_level(9))
+    submenu.add_command(label='10', command=lambda:start_level(10))
+    filemenu.add_cascade(label='Start level from number...', menu=submenu)
+    
+    filemenu.add_separator()
+    filemenu.add_command(label='Exit           Ctrl+Q', command=exiter)
+    menubar.add_cascade(label='File', menu=filemenu)
+
+    optmenu = Menu(menubar, tearoff=0)
+    optmenu.add_command(label="See scores", command=show)
+    
+    global donsave
+    
+    if donsave=='off':
+        optmenu.add_command(label="Don't save switch... ", command=don_save)
+    else:
+        optmenu.add_command(label="Don't save switch... ACTIVATED",background='orange', command=don_save)
+    menubar.add_cascade(label="Options", menu=optmenu)
+
+# function that based on mouse click initializes movement of red ball
+# tracks time
+
+    def mover(event):
+        
+        global decaseconds
+        global click_nr
+        global small_balls_clicked
+        global level_nr
+        global refreshed
+
+        global start_time
+        global end_time
+        global time_list
+        global level_nr
+        global donsave
+        
+        
+        click_nr+=1
+        
+        if click_nr%2==0:
+            end_time=time()-start_time
+            canvas.coords(red_ball, 600, 400, 700, 500)
+            decaseconds=200
+            if small_balls_clicked==level_nr:
+                refreshed='on'
+                
+                time_list[level_nr]=end_time
+                refresh()
+            else:
+                refreshed='on'
+                mb.showinfo('Fail!', 'You didn\'t click out all the blue balls.')
+
+                if time_list!={} and donsave=='off':
+                    option=mb.askyesno("Unsaved score", "Do you want to save your score for the levels you completed?")
+                    if option==True:
+                        saver()
+                level_nr=0
+                time_list={}
+                refresh()
+            refreshed='on'
+            try:
+                filemenu.entryconfig('Start level from number...',state='normal')
+                filemenu.entryconfig('New...       Ctrl+N',state='normal')
+            except:
+                return
+            return
+        filemenu.entryconfig('Start level from number...',state='disabled')
+        filemenu.entryconfig('New...       Ctrl+N',state='disabled')
+        start_time=time()
+        mover_up()
+        
+# functions moving red ball up and down
+# they track the position of the ball and how many blue balls were clicked out
+# call the refresh function to destroy the window when a level is completed or failed
+# ask for save option
+                            
+    def mover_up():
+        global decaseconds
+        global click_nr
+        global small_balls_clicked
+        global level_nr
+        global refreshed
+
+
+        if refreshed=='on':
+            return
+    
+    
+        if decaseconds==0:
+            mover_down()
+            return
+        canvas.move(red_ball, 0, -1)
+        decaseconds-=1
+        canvas.after(30,mover_up)
+
+    def mover_down():
+        global decaseconds
+        global click_nr
+        global level_nr
+        global refreshed
+        global time_list
+        global donsave
+
+        if refreshed=='on':
+            return
+        if decaseconds==200:
+            mb.showinfo('Fail!', 'You were too slow')
+            if time_list!={} and donsave=='off':
+                option=mb.askyesno("Unsaved score", "Do you want to save your score for the levels you completed?")
+                if option==True:
+                    saver()
+            time_list={}
+            level_nr=0
+            refresh()
+            refreshed='on'
+            return
+        canvas.move(red_ball, 0, 1)
+        decaseconds+=1
+        canvas.after(30,mover_down)
+        return
+
+# blue balls that have to be clicked out
+# they are randomly generated
+# their number coresponds to level number
+# behave differently in relation to the red ball
+
+    class Blue_ball():
+        def __init__ (self,x1,y1,x2,y2):
+            self.x1 = x1
+            self.y1 = y1
+            self.x2 = x2
+            self.y2 = y2
+            self.ball=canvas.create_oval(x1,y1,x2,y2, outline='blue',fill='blue')
+            canvas.tag_bind(self.ball,'<Button-1>', self.onclick)
+        
+        
+        def __repr__ (self):
+            return "Blue ball ({},{},{},{})".format(self.x1,self.y1,self.x2,self.y2)
+    
+        def onclick(self,event):
+            global click_nr
+            global small_balls_clicked
+            if click_nr%2==1:
+                canvas.delete(self.ball)
+                small_balls_clicked+=1
+        
+    
+    bb_list=[bb1,bb2,bb3,bb4,bb5,bb6,bb7,bb8,bb9,bb10]
+    bb_pos=[(randint(200,250),randint(200,250)),(randint(300,350),randint(200,250)),(randint(400,450),randint(200,250)), \
+            (randint(500,550),randint(200,250)),(randint(200,250),randint(300,350)),(randint(300,350),randint(300,350)), \
+            (randint(400,450),randint(300,350)),(randint(500,550),randint(300,350)),(randint(200,250),randint(400,450)), \
+            (randint(300,350),randint(400,450))]
+    shuffle(bb_pos)
+    
+
+    for x in range(level_nr):
+        bb_list[x]=Blue_ball(bb_pos[x][0],bb_pos[x][1],bb_pos[x][0]+50,bb_pos[x][1]+50)
+        
+# text on screen showing level nr
+
+    def del_text():
+        global text
+        canvas.delete(text)
+
+    
+    text=canvas.create_text(400,300,fill="orange",font="Times 80 bold",
+                        text="Level "+str(level_nr))
+    canvas.after(1500, del_text)
+    
+   
+    canvas.tag_bind(red_ball, '<ButtonPress-1>', mover)
+
+
+
+    root.mainloop()
+
+# refresh function handling the program after a level ended
+# destroys the tkinter window and creates a new one with the next level
+
+if __name__ == '__main__':
+    def refresh():
+        global level_nr
+        global refreshed
+        global time_list
+        global donsave
+        
+        
+        if level_nr<10:
+            root.destroy()
+            level_nr+=1
+            refreshed='off'
+            start_gui()
+            return
+# if level nr gets to 10 this function does the saving of scores, dialogbox
+
+        if level_nr==10:
+            mb.showinfo('Congratulations!', 'You won!')
+            if donsave=='off':
+                option=mb.askyesno("Save score?", "Do you want to save your score for the levels you completed?")
+                if option==True:
+                    name = askstring('Name', 'What is your name?')
+                
+                    while  name=='':
+                        name = askstring('Enter at least one character', 'What is your name?')
+                    if name==None:
+                        return
+                    conn=sqlite3.connect('flyball_scores.db')
+                    c=conn.cursor()
+                    try:
+                        c.execute('''CREATE TABLE overall_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level1_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level2_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level3_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level4_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level5_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level6_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level7_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level8_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level9_score(
+                        name text,
+                        score real,
+                        date text)''')
+
+                        c.execute('''CREATE TABLE level10_score(
+                        name text,
+                        score real,
+                        date text)''')
+                    except:
+                        pass
+        
+                    today = datetime.date.today()
+        
+                    if time_list.get(1):
+                        c.execute('INSERT INTO level1_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[1],
+                            'date':today.strftime("%b %d %Y")
+                        })
+
+                    if time_list.get(2):
+                        c.execute('INSERT INTO level2_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[2],
+                            'date':today.strftime("%b %d %Y")
+                        })
+
+                    if time_list.get(3):
+                        c.execute('INSERT INTO level3_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[3],
+                            'date':today.strftime("%b %d %Y")
+                        })
+
+                    if time_list.get(4):
+                        c.execute('INSERT INTO level4_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[4],
+                            'date':today.strftime("%b %d %Y")
+                        })
+
+                    if time_list.get(5):
+                        c.execute('INSERT INTO level5_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[5],
+                            'date':today.strftime("%b %d %Y")
+                        })
+
+                    if time_list.get(6):
+                        c.execute('INSERT INTO level6_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[6],
+                            'date':today.strftime("%b %d %Y")
+                        })
+
+                    if time_list.get(7):
+                        c.execute('INSERT INTO level7_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[7],
+                            'date':today.strftime("%b %d %Y")
+                        })
+
+                    if time_list.get(8):
+                        c.execute('INSERT INTO level8_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[8],
+                            'date':today.strftime("%b %d %Y")
+                        })
+
+                    if time_list.get(9):
+                        c.execute('INSERT INTO level9_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[9],
+                            'date':today.strftime("%b %d %Y")
+                        })
+                    if time_list.get(10):
+                        c.execute('INSERT INTO level10_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_list[10],
+                            'date':today.strftime("%b %d %Y")
+                        }) 
+
+
+                    if len(time_list)==10:
+                        time_sum=0
+                        for x in range(10):
+                            time_sum+=time_list[x+1]
+                        c.execute('INSERT INTO overall_score VALUES(:name,:score,:date)',
+                        {
+                            'name':name,
+                            'score':time_sum,
+                            'date':today.strftime("%b %d %Y")
+                        }) 
+
+
+                    conn.commit()
+                    conn.close()
+                    time_list={}
+# back to level 1                    
+                    root.destroy()
+                    level_nr=1
+                    refreshed='off'
+                    start_gui()
+                    return  
+                else:
+                    time_list={}
+                    root.destroy()
+                    level_nr=1
+                    refreshed='off'
+                    start_gui()
+                    return     
+            else:
+                time_list={}
+                root.destroy()
+                level_nr=1
+                refreshed='off'
+                start_gui()
+                return 
+        return
+
+# main function
+
+    start_gui()
